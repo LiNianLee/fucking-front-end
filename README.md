@@ -9,6 +9,21 @@
 以及另外一个重要的知识点：Function.__proto__ = Function.prototype.  
 对于这个点的理解是：Function作为一个内置对象，是本身就已经有的，因为它本身又是一个对象，为了与其他对象保持一致，所以就有了上述的关系，但是不能说因为有上述关系，就说Function调用自己，自己生成自己。
 
+### 词法作用域与动态作用域
+javascript采用的是此法作用域，这是一种静态作用域，**静态作用域是指函数的作用域在函数定义时就决定了**。与之对应的动态作用域是指**函数的作用域在函数调用时决定**。  
+下面这段代码可以很好地用来诠释静态作用域特点所起到的作用
+```
+  var value = 1;
+  function foo() {
+    console.log(value);
+  }
+  function bar() {
+    var value = 2;
+    foo();
+  }
+  bar();
+```
+
 
 ### 模块化
 [搞懂javascript模块化](https://juejin.cn/post/6844903636108066830#comment)  
