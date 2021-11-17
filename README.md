@@ -2,6 +2,14 @@
 一些自己找到的好的知识点学习链接
 
 # javascript
+
+### 原型与原型链
+这一个部分主要是记住这一张图  
+<img width="548" alt="截屏2021-11-17 下午2 21 44" src="https://user-images.githubusercontent.com/37279552/142145786-32f6d788-d0eb-4b69-ba76-56956b59d9ad.png">
+以及另外一个重要的知识点：Function.__proto__ = Function.prototype.  
+对于这个点的理解是：Function作为一个内置对象，是本身就已经有的，因为它本身又是一个对象，为了与其他对象保持一致，所以就有了上述的关系，但是不能说因为有上述关系，就说Function调用自己，自己生成自己。
+
+
 ### 模块化
 [搞懂javascript模块化](https://juejin.cn/post/6844903636108066830#comment)  
 一些关键点：  
