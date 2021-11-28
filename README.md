@@ -118,6 +118,7 @@ console.log(a);
 **如果函数是在 某个上下文对象下 调用**，这是一种隐性绑定，this指向的就是这个上下文对象  
 **如果定义了一个函数，直接调用，这种就是默认绑定，this指向window对象**  
 **箭头函数**，箭头函数的指向与外层父函数的this指向保持一致，所以这里有一个要点就是，箭头函数外层必须要有一个父函数，否则箭头函数的this指向的就是window对象。且箭头函数的this指向一旦确定，就不会再更改了  
+
 ### 手写call
 手写call的过程中有下面几个关键点需要注意：  
 1、用什么方法获取外面传进来的参数，因为arguments并不是一个严格的数组类型，这里首先是用args数组存储了各个arguments参数，然后向eval传递一个拼接的字符串，eval会执行这个字符串。  
@@ -147,6 +148,99 @@ function print (p1, p2, p3) {
 
 print.myCall(null, 'a', 'b', 'c');
 ```
+
+### 手写apply
+```
+Function.prototype.myApply = function (context, args) {
+  var context = context || (typeof context === 'undefined' ? {} : window);
+  context.fn = this;
+
+  // 下面这种方式对外面参数的处理采用的是ES6的结构赋值
+  // var obj = context.fn(...(args || [])); 
+  var result;
+  if (!args || !args.length) {
+    result = context.fn();
+  } else {
+    var argsArr = [];
+    for (let i = 0; i < args.length; i++) {
+      argsArr.push('args[' + i + ']');
+    }
+    result = eval('context.fn(' + argsArr + ')');
+  }
+  delete context.fn;
+  return result;
+}
+
+var obj = {
+  value: 1
+}
+
+function print (p1, p2, p3) {
+  console.log(this.value);
+  console.log(p1 + p2 + p3);
+}
+
+print.myApply(obj, [1, 2, 3]);
+```
+
+### 手写bind
+写bind要注意下面这几个关键点：  
+1、调用bind之后返回的是一个函数，函数可以直接调用，也可以作为构造函数使用，当作为构造函数使用时，会新建一个对象，这个对象才是最终会指向的this，这一步在生成函数绑定this的时候要进行兼容  
+2、生成的新函数应该与外面的函数的原型对象保持一致，但是为了防止对新函数的原型对象进行修改时也修改了外面函数的原型对象，所以可以利用一个空函数来进行转接 这个空函数就是下面的tempFunc。  
+```
+  Function.prototype.myBind = function (context) {
+  var self = this;
+  var args = Array.prototype.slice.call(arguments, 1);
+
+  var tempFunc = function () {};
+
+  var func = function () {
+    var args2 = Array.prototype.slice.call(arguments);
+    // 这里需要注意，self最终要绑定的 真的是context吗？因为返回的函数是可以作为构造函数来创建对象的
+    // 这个时候绑定的对象应该是刚刚创建的新对象
+    return self.apply(this instanceof func ? this : context, (args.concat(args2)));
+  }
+
+  // 这一步是为了避免 修改func的prototype也影响了原来函数的prototype
+  tempFunc.prototype = self.prototype;
+  func.prototype = new tempFunc();
+  return func;
+}
+
+var obj = {
+  value: 1
+}
+
+function print (a, b, c, d, e, f) {
+  this.menu = '下滑';
+  console.log(this.value);
+  console.log(a + b + c);
+  console.log(d + '' + e + '' + f);
+}
+
+const func = print.bind(obj, 1, 2, 3);
+const newObj = new func(4, 5, 6);
+console.log(newObj.menu);
+```
+
+### 手写new  
+new这个修饰符主要做了下面四件事：  
+1、新创建了一个对象。  
+2、修改这个对象的__prop__属性。  
+3、修改构造函数的this指针。 
+4、返回一个对象。 
+注意看第四点，这里写的是返回一个对象，并没有说一定返回的就是那个刚刚新创建的对象，因为构造函数在执行的时候是可能存在返回值的。如果返回值是一个对象，那么就把这个对象原样进行返回，如果构造函数执行后没有返回值，或者返回值是一个基本数据类型，才返回那个刚刚新建的对象。  
+```
+function myNew() {
+  var obj = new Object();
+  c = [].shift.call(arguments);
+  obj.__proto__ = Constructor.prototype;
+  var ret = Constructor.apply(obj, arguments);
+  return typeof ret === 'object' ? ret : obj;
+}
+```
+
+
 
 
 
