@@ -238,7 +238,11 @@ function myNew() {
   var ret = Constructor.apply(obj, arguments);
   return typeof ret === 'object' ? ret : obj;
 }
-```
+```  
+
+### 创建对象的多种方式
+[创建对象的多种方式](https://github.com/mqyqingfeng/Blog/issues/15)
+
 
 
 
