@@ -243,6 +243,53 @@ function myNew() {
 ### 创建对象的多种方式
 [创建对象的多种方式](https://github.com/mqyqingfeng/Blog/issues/15)
 
+### 继承的多种方式
+[继承的多种方式](https://github.com/mqyqingfeng/Blog/issues/16)  
+继承的终极解决方案：寄生组合式继承，既只用调用一次父构造函数，从而避免了在Parent.prototype上创建多余的不必要的属性，同时还能保持原型链的正确性，并且能够正常使用instanceof和isPrototypeOf。  
+```
+function Parent () {
+  this.name = 'Kelvin',
+  this.colors = ['red', 'blue', 'black']
+}
+
+Parent.prototype.sayName = function () {
+  console.log(this.name);
+}
+
+function Child (age) {
+  Parent.call(this);
+  this.age = age;
+}
+
+function createPrototype (obj) {
+  function f () {};
+  f.prototype = obj;
+  return new f();
+}
+
+// 这样就完成了子类继承父类的操作
+function createExtend (Child, Parent) {
+  var proto = createPrototype(Parent.prototype);
+  proto.constructor = Child;
+  Child.prototype = proto;
+}
+
+createExtend(Child, Parent);
+
+Child.prototype.sayAge = function () {
+  console.log(this.age);
+}
+
+const child1 = new Child(18);
+
+console.log(child1.name);
+console.log(child1.age);
+console.log(child1.colors);
+child1.sayName();
+child1.sayAge();
+```
+
+
 
 
 
