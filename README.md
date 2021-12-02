@@ -289,6 +289,88 @@ child1.sayName();
 child1.sayAge();
 ```
 
+### 防抖  
+防抖的意思是你尽管触发，我一定要在最后一次触发之后等待wait的时间再执行代码
+```
+function debounce (callback, wait, immediate) {
+  var context, args;
+  var timer = null;
+  return function () {
+    context = this;
+    args = arguments;
+
+    if (timer) {
+      clearTimeout(timer);
+    }
+
+    if (immediate) {
+      var tag = !timer;
+      timer = setTimeout(() => {
+        timer = null;
+      }, wait);
+      if (tag) {
+        callback.apply(context, args);
+      }
+    } else {
+      timer = setTimeout(() => {
+        callback.apply(context, args);
+      }, wait)
+    }
+
+  }
+}
+```  
+上面的代码中支持传递immediate参数，用来控制功能是否立即执行，如果immediate为true的话，其实他只会反复执行if(immediate)里面的代码，怎么执行呢，那肯定是要有一个tag,只有当这个tag为true的时候才能去执行回调函数，那tag什么时候为true呢，那就是当timer为空，也就是一轮倒计时结束之后，就表示可以执行下一个immediate了  
+
+### 节流
+节流的意思是说，每隔一段时间，触发一次功能。节流有两种实现方式，一种是时间戳，一种是定时器，也可以两种结合，通过传递可配置参数来决定功能是在一开始就执行，还是最后一次操作之后执行还是两者都执行。首先看下终极版本的代码。  
+```
+function throttleV4 (callback, wait, options) {
+  var context, args;
+  var timer = null;
+  var previous = 0;
+  var opt = {};
+  if (options) {
+    opt = options;
+  }
+
+  var later = function () {
+    previous = opt.isHeading ? +new Date() : 0; // 这里是为了和下面throttled函数里面对previous的复制保持一致，如果isHeading为false，previous才为0，下次throttled的时候才能走到
+    // if (!previous && !options.isHeading)这个判断里面去
+    timer = null;
+    callback.apply(context, args);
+  }
+
+  var throttled =  function () {
+    context = this;
+    args = arguments;
+    var now = +new Date();
+    if (!previous && !options.isHeading) {
+      previous = now;
+    }
+    var remain = wait - (now - previous);
+    // 表示需要立即执行
+    if (remain <=0 || remain > wait) {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      previous = now;
+      callback.apply(context, args);
+    } else if (!timer && opt.isTail) {
+      timer = setTimeout(later, remain);
+    }
+  }
+
+  throttled.cancel = function () {
+    clearTimeout(timer);
+    timer = null;
+    previous = 0;
+  }
+  return throttled;
+}
+```
+
 
 
 
