@@ -375,8 +375,10 @@ defer和async是用来加在script脚本上的标签，在不加这些标签的�
 如果增加的是defer标签，他不会阻塞document的解析，这个属性会在解析document的同时进行下载，并且在DOMContentLoaded事件(原始的HTML文档被全部加载和解析完成)之前顺序执行这些defer脚本，顺序执行脚本就是说如果有多个脚本加了defer，他们的执行顺序是按照他们在文档中的顺序。 
 async同样不会阻塞document的解析，他也会在document解析的同时去下载，只是文件在下载完成之后就会立即执行，没有固定的先后顺序，多个家乐async标签的脚本，谁先下载完了谁就会先执行。注意，脚本下载的时候是不会打断document的解析的，但是脚本在执行的时候是会打断document的解析的。
 
+### React组件通信  
+[参考文章](https://zhuanlan.zhihu.com/p/326254966)
 
-
+1、父子组件之间的通信
 
 
 
