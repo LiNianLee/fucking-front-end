@@ -397,6 +397,45 @@ async同样不会阻塞document的解析，他也会在document解析的同时�
 3、原型模式(共享所有的属性和方法，无法初始化数据，且对于一些引用类型的数据，一个对象对它的更改会导致所有对象都受到影响) 
 4、组合模式：构造模式和组合模式的结合，该共享的共享，该私有的私有，并且将原型对象的constructor手动指向构造函数  
 
+### 继承的多种方式  
+
+1、原型链继承:子类的原型链继承父类实例。(共享了父类的所有属性和方法，一个子类实例对引用类型数据的修改会影响其他子类实例)  
+2、构造函数继承：子类构造函数利用Parent.call(this, params),实现对父类的继承，并且可以对父类传递参数。缺点是父类的所有东西，无论是属性还是方法，都要写在构造函数里面(因为这样子类才能继承啊喂！),那每创建一个子类实例，都会要创建新的方法  
+3、组合继承，构造函数继承和原型链继承的结合  
+```
+function Parent(name){
+  this.name = name;
+}
+Parent.prototype.getName = function () {
+  ///
+}
+function Child (name) {
+  Parent.call(this, name);
+}
+Child.protoype = new Parent();
+Child.prototype.constructor = Child;
+```  
+为什么这种组合继承的方式能有效规避前两种继承方式的缺点呢？首先在父类中是实现了私有/共享数据的分离的，该私有的，放到构造函数里面，该共享的，放到原型链上。但是Child的原型对象是Parent的实例，不是意味着Child的原型链上其实也是存在那些私有属性的吗？的确是存在的，但是因为Child的构造函数中也存在这些属性，所以在真正使用子类创建实例，并且访问实例中的对象的时候，会先去访问构造函数中变量，找不到再顺着原型链找，所以原型链上的那些私有属性虽然是存在的，但是由于构造函数中也有一模一样的一份，原型链上的是不会被访问到的。这种方法的缺点是需要调用两次父类构造函数。  
+4、原型继承  
+```
+function createObj (o) {
+  function F(){};
+  F.prototype = o;
+  return new F();
+}
+``` 
+这个其实就是ES5的Object.create的实现，他的缺点和原型继承一样  
+5、寄生继承（一直无法理解这种方式好在哪儿。。。）
+```
+function createObj (o) {
+  var clone = Object.create(o);
+  clone.sayName = function () {};
+  return clone;
+}
+```  
+
+
+
 
 
 
