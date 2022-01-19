@@ -433,6 +433,20 @@ function createObj (o) {
   return clone;
 }
 ```  
+缺点是每次调用里面的sayName函数都会重新创建
+6、寄生组合继承  
+```
+function Parent (name) {this.name = name;}
+Parent.prototype.getName = function () {};
+
+function Child (name) {
+  Parent.call(this, name);
+}
+function F () {};
+F.prototype = Parent.prototype;
+Child.prototype = new F();
+Child.prototype.constructor = Child;
+```
 
 
 
