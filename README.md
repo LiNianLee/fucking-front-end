@@ -447,7 +447,7 @@ F.prototype = Parent.prototype;
 Child.prototype = new F();
 Child.prototype.constructor = Child;
 ```
-
+### React context和mobx context
 
 
 
