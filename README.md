@@ -506,6 +506,7 @@ const SimpleEventPlugin = {
 }
 ```  
 首先，extractEvents是一个事件统一处理函数，eventTypes里面保存了原生事件名与对应的配置项之间的关系。  
+
 **registrationnameDependencies**记录合成事件与原生事件之间的关系  
 ```
 {
@@ -517,10 +518,12 @@ const SimpleEventPlugin = {
   onMouseLeave: ['mouseout', 'mouseover'],
   ...
 }
-```
+```  
+**上面所提到的合成事件与事件插件，合成事件与原生事件之间的映射关系，是在事件初始化的时候完成的。**  
 
 
 #### 事件如何绑定的  
+当我们在JSX中给一个元素绑定了一个事件，React在diff阶段，发现是**HostComponent**类型的fiber，就会用diffProperties进行单独处理。在接下来的一系列流程里面，会利用前面事件初始化阶段形成的合成事件-事件插件和合成事件-原生事件之间的映射关系，将这个绑定在fiber元素上的合成事件，拆分成其对应的原生事件，然后判断原生事件的类型，大部分事件按冒泡逻辑处理，少部分如scroll，focus，blur等按照捕获逻辑进行处理(无论是onClick还是onClickCapture都是发生在冒泡阶段)。最后利用统一的事件处理函数dispatchEvent，逐个绑定在document上。  
 
 #### 事件如何触发的  
 
