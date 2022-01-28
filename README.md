@@ -460,6 +460,29 @@ Child.prototype.constructor = Child;
 3、我们绑定在DOM上的某些事件，比如onChange,绑定在document上面时，可能会有多个事件与之对应。  
 4、注意，这种绑定是一种按需绑定，也就是说，我发现需要绑定click事件才会去绑定。  
 
+为什么要采取这种合成事件的模式呢？
+1、避免了多个事件直接绑定在原生DOM上而产生一些无法预料的冲突。  
+2、形成统一的事件体系来抹平浏览器之间的差异性。  
+
+#### 事件如何合成的
+**namesToPlugin**装事件名和事件模块插件的映射
+```
+namesToPlugin = {
+  SimpleEventPlugin,  // 处理事件的插件
+  EnterLeaveEventPlugin,  // 处理事件的插件
+  ChangeEventPlugin,  // 处理事件的插件
+  SelectEventPlugin,  // 处理事件的插件
+  BeforeInputEventPlugin,  // 处理事件的插件
+}
+```
+#### 事件如何绑定的  
+
+#### 事件如何触发的  
+
+
+
+
+
 
 
 
