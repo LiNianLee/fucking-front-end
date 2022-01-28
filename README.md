@@ -474,7 +474,52 @@ namesToPlugin = {
   SelectEventPlugin,  // 处理事件的插件
   BeforeInputEventPlugin,  // 处理事件的插件
 }
+```  
+**registrationNameModules**记录**合成事件**与事件插件的关系
 ```
+registrationNameModules = {
+  onBlur: SimpleEventPlugin,
+  onClick: SimpleEventPlugin,
+  onClickCapture: SimpleEventPlugin,
+  onChange: ChangeEventPlugin,
+  onChangeCapture: ChangeEventPlugin,
+  onMouseEnter: EnterLeaveEventPlugin,
+  onMouseLeave: EnterLeaveEventPlugin,
+}
+```  
+**事件插件里面有什么？**  
+```
+const SimpleEventPlugin = {
+    eventTypes:{ 
+        'click':{ /* 处理点击事件  */
+            phasedRegistrationNames:{
+                bubbled: 'onClick',       // 对应的事件冒泡 - onClick 
+                captured:'onClickCapture' //对应事件捕获阶段 - onClickCapture
+            },
+            dependencies: ['click'], //事件依赖
+            ...
+        },
+        'blur':{ /* 处理失去焦点事件 */ },
+        ...
+    }
+    extractEvents:function(topLevelType,targetInst,){ /* eventTypes 里面的事件对应的统一事件处理函数，接下来会重点讲到 */ }
+}
+```  
+首先，extractEvents是一个事件统一处理函数，eventTypes里面保存了原生事件名与对应的配置项之间的关系。  
+**registrationnameDependencies**记录合成事件与原生事件之间的关系  
+```
+{
+  onBlur: ['blur'],
+  onClick: ['click'],
+  onClickCapture: ['click'],
+  onChange: ['blur', 'change', 'click', 'focus', 'input', 'keydown', 'keyup', 'selectionchange'],
+  onMouseEnter: ['mouseout', 'mouseover'],
+  onMouseLeave: ['mouseout', 'mouseover'],
+  ...
+}
+```
+
+
 #### 事件如何绑定的  
 
 #### 事件如何触发的  
