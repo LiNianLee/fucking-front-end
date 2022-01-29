@@ -526,6 +526,11 @@ const SimpleEventPlugin = {
 当我们在JSX中给一个元素绑定了一个事件，React在diff阶段，发现是**HostComponent**类型的fiber，就会用diffProperties进行单独处理。在接下来的一系列流程里面，会利用前面事件初始化阶段形成的合成事件-事件插件和合成事件-原生事件之间的映射关系，将这个绑定在fiber元素上的合成事件，拆分成其对应的原生事件，然后判断原生事件的类型，大部分事件按冒泡逻辑处理，少部分如scroll，focus，blur等按照捕获逻辑进行处理(无论是onClick还是onClickCapture都是发生在冒泡阶段)。最后利用统一的事件处理函数dispatchEvent，逐个绑定在document上。  
 
 #### 事件如何触发的  
+**一次点击事件，在react底层发生了什么？**  
+首先根据真实的**事件源对象**，找到e.target的真实DOM，然后根据DOM元素，找到其对应的fiber节点，然后进入legacy模式的事件处理系统，进行批量更新。  
+知识点：**dom节点与其相应的fiber节点之间的关系是怎么样的？**  
+1、react在初始化真实DOM的时候，用了一个随机key指针指向当前DOM节点对应的fiber节点  
+2、fiber节点可以通过stateNode找到与之对应的DOM节点
 
 
 
