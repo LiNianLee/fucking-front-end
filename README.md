@@ -554,7 +554,7 @@ const SimpleEventPlugin = {
 1、首先产生一个事件源对象，就是上面说的合成事件类型实例(里面封装了比如stopPropagation和preventDefault等方法，这样我们就不用跨浏览器单独处理兼容问题，而是统一交给react底层进行处理了)  
 2、然后从事件源开始逐渐往上，查找DOM元素类型hostComponent对应的fiber，收集上面的react合成事件  
 3、这个时候会维护一个函数执行队列，如果是捕获阶段的处理函数，会使用unshift函数将这个处理函数添加到函数执行队列的前面，如果是冒泡阶段的处理函数，则是通过push添加到函数执行队列的末尾
-4、最后讲真个函数执行队列挂载到事件源对象上  
+4、最后讲函数执行队列挂载到事件源对象上  
 
 这个地方还有一个点要注意的是：React的冒泡和捕获并不是真正的DOM级别的，而是在fiber上面，可以看到上面extractEvents中传入的是fiber节点，但我们的点击是发生在DOM上面啊，这是怎么做到的呢，这里就是点击发生的事件源对象与其对应的fiber节点之间的关系了：  
 首先根据真实的**事件源对象**，找到e.target的真实DOM，然后根据DOM元素，找到其对应的fiber节点，然后进入legacy模式的事件处理系统，进行**批量更新**。  
@@ -562,8 +562,8 @@ const SimpleEventPlugin = {
 1、react在初始化真实DOM的时候，用了一个随机key指针指向当前DOM节点对应的fiber节点  
 2、fiber节点可以通过stateNode找到与之对应的DOM节点  
 
-
-然后就是进行批量更新。他会把刚刚产生的事件执行队列中的函数，逐个取出，依次执行，并且有这么一个逻辑  
+至此，我们拥有了事件源对象，并且事件源对象上已经挂在了函数执行队列了(**都是在extractEvents函数中完成的！**)。那现在就runEventsInBatch(events)，传入这个完备的事件源对象，执行我们真正的事件函数吧！ 
+在这个函数里面。他会把刚刚产生的事件执行队列中的函数，逐个取出，依次执行，并且有这么一个逻辑  
 ```
 if (Array.isArray(dispatchListeners)) {
   for (let i = 0; i < dispatchListeners.length; i++) {
