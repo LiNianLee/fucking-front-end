@@ -523,20 +523,44 @@ const SimpleEventPlugin = {
 
 
 #### 事件如何绑定的  
-当我们在JSX中给一个元素绑定了一个事件，React在diff阶段，发现是**HostComponent**类型的fiber，就会用diffProperties进行单独处理。在接下来的一系列流程里面，会利用前面事件初始化阶段形成的合成事件-事件插件和合成事件-原生事件之间的映射关系，将这个绑定在fiber元素上的合成事件，拆分成其对应的原生事件，然后判断原生事件的类型，大部分事件按冒泡逻辑处理，少部分如scroll，focus，blur等按照捕获逻辑进行处理(无论是onClick还是onClickCapture都是发生在冒泡阶段)。最后利用统一的事件处理函数dispatchEvent，逐个绑定在document上。  
+当我们在JSX中给一个元素绑定了一个事件，React在diff阶段，发现是**HostComponent**类型的fiber，就会用diffProperties进行单独处理。在接下来的一系列流程里面，会利用前面事件初始化阶段形成的合成事件-事件插件和合成事件-原生事件之间的映射关系，将这个绑定在fiber元素上的合成事件，拆分成其对应的原生事件，然后判断原生事件的类型，大部分事件按冒泡逻辑处理，少部分如scroll，focus，blur等按照捕获逻辑进行处理(无论是onClick还是onClickCapture都是发生在冒泡阶段)。最后利用统一的事件处理函数dispatchEvent(也就是说，这时候所有原生事件的listener都是dispatchEvent)，逐个绑定在document上(当然前提是这个原生事件之前没有被绑定过)。React并没有将我们业务逻辑里的listener绑定在原生事件上。  
+1、我们将我们需要的事件最终都注册到了document上面。  
+2、所有原生事件的listener都是dispatchEvent，他并没有和我们业务逻辑里的listener扯上什么关系  
+3、同一个类型的事件只会绑定一次，最终反映在DOM事件上的只有dispatchEvent这一个listener,就算后来我们的页面发生了重大变化，React什么都不需要做，不用去removeEventListener之类  
+
 
 #### 事件如何触发的  
 **一次点击事件，在react底层发生了什么？**  
+
+首先点击发生的时候，上面为原生事件绑定的统一的listener：dispatchListener会被率先执行，在这个函数里面，会最终调用batchedEventUpdates批量更新函数，而batchedEventUpdates函数中最终会执行handleTopLevel函数，在这个函数里面会做什么事情呢？
+```
+  function handleTopLevel(bookKeeping){
+    const { topLevelType,targetInst,nativeEvent,eventTarget, eventSystemFlags} = bookKeeping
+    for(let i=0; i < plugins.length;i++ ){
+        const possiblePlugin = plugins[i];
+        /* 找到对应的事件插件，形成对应的合成event，形成事件执行队列  */
+        const  extractedEvents = possiblePlugin.extractEvents(topLevelType,targetInst,nativeEvent,eventTarget,eventSystemFlags)  
+    }
+    if (extractedEvents) {
+        events = accumulateInto(events, extractedEvents);
+    }
+    /* 执行事件处理函数 */
+    runEventsInBatch(events);
+}
+```  
+可以看到，我们可以从前一步生成的bookkeeping中拿到此次触发所对应的原生事件，以及相关的fiber节点，然后我会去遍历事件插件plugin数组，判断这个事件插件是不是需要处理这个类型的事件。这一步的具体内容是在possiblePlugin.extractEvents这个函数里。他首先会问一下，我这个事件插件是处理这个原生事件的插件吗？不是，那就直接return，如果是的话，那我拿着这个事件插件，去生成一个事件源对象，怎么生成事件源对象？首先我根据原生事件，决定我要生成的是哪一种合成事件类型(原生event的合成类型)，然后拿着这个合成事件类型去事件池里面找，如果事件池里面有这个合成事件类型的实例，那我复用这个实例，如果没有我就生成一个这种事件类型实例。
+1、首先产生一个事件源对象，就是上面说的合成事件类型实例(里面封装了比如stopPropagation和preventDefault等方法，这样我们就不用跨浏览器单独处理兼容问题，而是统一交给react底层进行处理了)  
+2、然后从事件源开始逐渐往上，查找DOM元素类型hostComponent对应的fiber，收集上面的react合成事件  
+3、这个时候会维护一个函数执行队列，如果是捕获阶段的处理处理函数，会使用unshift函数将这个处理函数添加到函数执行队列的前面，如果是冒泡阶段的处理函数，则是通过push添加到函数执行队列的末尾
+4、最后讲真个函数执行队列挂载到事件源对象上  
+
 首先根据真实的**事件源对象**，找到e.target的真实DOM，然后根据DOM元素，找到其对应的fiber节点，然后进入legacy模式的事件处理系统，进行**批量更新**。  
 知识点：**dom节点与其相应的fiber节点之间的关系是怎么样的？**  
 1、react在初始化真实DOM的时候，用了一个随机key指针指向当前DOM节点对应的fiber节点  
 2、fiber节点可以通过stateNode找到与之对应的DOM节点  
 
 回到上面的事件插件里面，有一个extractEvents，它是一个统一的事件处理函数，在这个事件处理函数里面做了什么呢？
-1、首先它会产生一个事件源对象(里面封装了比如stopPropagation和preventDefault等方法，这样我们就不用跨浏览器单独处理兼容问题，而是统一交给react底层进行处理了)  
-2、然后从事件源开始逐渐往上，查找DOM元素类型hostComponent对应的fiber，收集上面的react合成事件  
-3、这个时候会维护一个函数执行队列，如果是捕获阶段的处理处理函数，会使用unshift函数将这个处理函数添加到函数执行队列的前面，如果是冒泡阶段的处理函数，则是通过push添加到函数执行队列的末尾
-4、最后讲真个函数执行队列挂载到事件源对象上  
+
 
 这就是一个事件插件extractEvents会去做的事情，在这个里面形成了事件源对象和事件执行队列。  
 
