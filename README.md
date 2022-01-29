@@ -527,10 +527,54 @@ const SimpleEventPlugin = {
 
 #### 事件如何触发的  
 **一次点击事件，在react底层发生了什么？**  
-首先根据真实的**事件源对象**，找到e.target的真实DOM，然后根据DOM元素，找到其对应的fiber节点，然后进入legacy模式的事件处理系统，进行批量更新。  
+首先根据真实的**事件源对象**，找到e.target的真实DOM，然后根据DOM元素，找到其对应的fiber节点，然后进入legacy模式的事件处理系统，进行**批量更新**。  
 知识点：**dom节点与其相应的fiber节点之间的关系是怎么样的？**  
 1、react在初始化真实DOM的时候，用了一个随机key指针指向当前DOM节点对应的fiber节点  
-2、fiber节点可以通过stateNode找到与之对应的DOM节点
+2、fiber节点可以通过stateNode找到与之对应的DOM节点  
+
+回到上面的事件插件里面，有一个extractEvents，它是一个统一的事件处理函数，在这个事件处理函数里面做了什么呢？
+1、首先它会产生一个事件源对象(里面封装了比如stopPropagation和preventDefault等方法，这样我们就不用跨浏览器单独处理兼容问题，而是统一交给react底层进行处理了)  
+2、然后从事件源开始逐渐往上，查找DOM元素类型hostComponent对应的fiber，收集上面的react合成事件  
+3、这个时候会维护一个函数执行队列，如果是捕获阶段的处理处理函数，会使用unshift函数将这个处理函数添加到函数执行队列的前面，如果是冒泡阶段的处理函数，则是通过push添加到函数执行队列的末尾
+4、最后讲真个函数执行队列挂载到事件源对象上  
+
+这就是一个事件插件extractEvents会去做的事情，在这个里面形成了事件源对象和事件执行队列。  
+
+然后就是进行批量更新。他会把刚刚产生的事件执行队列中的函数，逐个取出，依次执行，并且有这么一个逻辑  
+```
+if (Array.isArray(dispatchListeners)) {
+  for (let i = 0; i < dispatchListeners.length; i++) {
+    if (event.isPropagationStopped) {
+      break;
+    }
+    dispatchListeners[i](event); // 这一步就是在执行单个的事件处理函数
+  }
+}
+```  
+从上面的代码中可以看到，如果我们在一个事件处理函数中写下return false之类的代码，是并不能阻止浏览器的默认事件的，如果想要阻止，必须是e.preventDefault,或者是更具体的，e.stopPropagation,这样，react底层会把isPropagationStopped置为true，从而阻止冒泡。  
+
+注意这里还有一个事件池的概念。看下面的代码  
+```
+handleClick = (e) => {
+   console.log(e.target); // 某个DOM
+   setTimeout(() => {
+      console.log(e.target); // null
+   }, 0)
+}
+```  
+在第一个console的时候，当然是能够获取到事件源的，但是当handleClick执行完毕之后，也就是进入到setTimeout中，这个时候事件源对象已经被释放到了事件池中，这样做的好处是我们可以不用再次创建这个事件源对象，而是在需要的时候对其进行复用。(当然如果在setTimeout的回调中传入了e，这个时候因为闭包的存在，里面的console是可以访问到这个事件源的，但是这样也会导致事件源对象不能被及时放回事件池中)
+
+#### React17中所进行的更改
+1、取消了事件池，这样就不会出现上面setTimeout中获取不到事件源的情况  
+2、事件不再统一绑定到document上面，而是绑定在React.render(app, container)的container上面，这样当存在有多个应用的时候，是比较方便的，因为你是绑定在单一的应用上的  
+3、react17中对原生的捕获事件进行了支持，并且onScroll事件不再进行冒泡，onFocus 和 onBlur 使用原生 focusin， focusout 合成。  
+
+#### 我没有明白的是，反正最后在批量更新的时候还是要逐渐向上收集事件处理函数进行更新的，那前面把那么多合成事件拆分成原生事件绑定在document上面是干啥？
+
+
+
+
+
 
 
 
