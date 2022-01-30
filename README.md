@@ -592,6 +592,56 @@ handleClick = (e) => {
 2、事件不再统一绑定到document上面，而是绑定在React.render(app, container)的container上面，这样当存在有多个应用的时候，是比较方便的，因为你是绑定在单一的应用上的  
 3、react17中对原生的捕获事件进行了支持，并且onScroll事件不再进行冒泡，onFocus 和 onBlur 使用原生 focusin， focusout 合成。  
 
+### React Hooks原理  
+function组件是一种无状态组件，他不像class组件，有state可以去记录组件的状态，有生命周期，所以就有了hooks被应用在function组件中，用来解决上面这些问题。  
+
+首先用一个例子来区分一下class组件和function组件之间的区别  
+```
+class Index extends React.Component {
+  constructor () {
+    // ....
+    this.state = {
+      num: 0
+    }
+  }
+  
+  handleClick = () => {
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        this.setState({ num: this.state.num + 1; })
+        console.log(this.state.num); // 1 2 3 4 5
+      }, 0)
+    }
+  }
+  
+  render () {
+    return (
+      <div onClick={handleClick} />
+    )
+  }
+}
+
+function Index () {
+  const [num, setNum] = useState(0);
+  
+  const handleClick = () => {
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        setNum(num + 1);
+        console.log(num); // 0 0 0 0 0
+      }, 0)
+    }
+  }
+  
+  return (
+    <div onClick={handleClick} />
+  )
+}
+```  
+上面两个例子，在class组件中的输出是1 2 3 4 5，因为他的输出是写在setTimeout里面的，打破了react批量更新的原则，他的更新会放在下一次事件循环进行，而这个时候批量更新已经结束，所以每次setState之后，都能获取到最新的state值。但是在function组件中，由于它没有一个class实例可以去保存这些状态，所以每一次去setNum其实都是在重新执行一次函数组件，在重新走到useState的时候，react内部其实是走了updateState的，是可以拿到最新的状态。然后接着往下，这个时候的handleClick是一个被重新创建的新函数，也就是说，handleClick指向了一块新的内存空间，但是在顺着for循环往下的时候，num所在的上下文应该是第一次初始化时的上下文，因为通过闭包的，把初始化时的值保存在了num的执行上下文里面(典型的闭包啊：虽然外层函数销毁了，但是内层函数还是能对外层函数的变量进行访问)，所以在第二个例子中打印出来的num都是0，即初始值。**所以我们需要hooks，用来保存函数组件执行过程中的状态**  
+
+
+
 
 
 
