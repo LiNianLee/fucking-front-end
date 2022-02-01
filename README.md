@@ -450,7 +450,7 @@ Child.prototype.constructor = Child;
 ### React context和Mobx context
 
 ### React 事件机制
-首先，当我们写下一段JSX：在一个button元素上，绑定了onClick事件，会发生什么？Babel会转译这段JSX，最终专程一个fiber对象，其中的memoizedProps和pendingProps属性会保存我们这次的onClick事件。  
+首先，当我们写下一段JSX：在一个button元素上，绑定了onClick事件，会发生什么？Babel会转译这段JSX，最终转成一个fiber对象，其中的memoizedProps和pendingProps属性会保存我们这次的onClick事件。  
 
 然后通过控制台可以看到，button元素上绑定了document和button两个事件监听，在button的事件监听内，handler并不是我们传入的函数，而是一个noop(空函数)，真正的事件是被绑定在document上面的。  
 
