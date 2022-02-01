@@ -640,6 +640,27 @@ function Index () {
 ```  
 上面两个例子，在class组件中的输出是1 2 3 4 5，因为他的输出是写在setTimeout里面的，打破了react批量更新的原则，他的更新会放在下一次事件循环进行，而这个时候批量更新已经结束，所以每次setState之后，都能获取到最新的state值。但是在function组件中，由于它没有一个class实例可以去保存这些状态，所以每一次去setNum其实都是在重新执行一次函数组件，在重新走到useState的时候，react内部其实是走了updateState的，是可以拿到最新的状态。然后接着往下，这个时候的handleClick是一个被重新创建的新函数，也就是说，handleClick指向了一块新的内存空间，但是在顺着for循环往下的时候，num所在的上下文应该是第一次初始化时的上下文，因为通过闭包的，把初始化时的值保存在了num的执行上下文里面(典型的闭包啊：虽然外层函数销毁了，但是内层函数还是能对外层函数的变量进行访问)，所以在第二个例子中打印出来的num都是0，即初始值。
 
+useState 负责组件更新  
+useRef 负责保存数据  
+useEffect 负责执行副作用  
+useMemo 负责缓存优化  
+
+为什么hooks不可以写在条件语句中，react是怎么记录hooks的顺序的？  
+在workInProgress fiber中，有一个memoizedState，在函数组件中，他用来存储对应fiber中的hooks链表，也就是说，这个fiber中包含的hooks，会根据hooks初始化的顺序，链接成一个链表，保存在memoizedState中。如果出现了条件语句，就可能存在更新前后fiber的memoizedState中保存的hooks链表不一致，这个时候如果需要更新状态，就可能会报错。**Attention:**在单个的hooks里面也有memoizedState这个变量，用来保存单个hooks的相关信息，不同种类的hooks，memoizedState的值也不同，这里需要注意与workInProgress fiber中的memoizedState进行区分。  
+
+workInProgress fiber中还有updateQueue，用来保存useEffect链表，这是一个环形链表，workInProgress.updateQueue.lastEffect = lastEffect(fiber中最后一个声明的useEffect)，lastEffect.next = firstEffect。所以在react里面，有一个effect list，他是采用深度优先遍历的方法，在render阶段，找出所有那些有副作用的fiber，最后构建成一个只带有副作用的effect list链表。在commit阶段，遍历这个effect list，根据每一个effect节点的effect tag类型，执行effect，并且最终导致DOM树的更改。**关于effect list，存储的到底是effect还是fiber节点？还有effect tag是什么？**   
+
+**总结一下**  
+1、在初始化阶段，workInProgress fiber中的每一个hooks都会进行初始化，生成一个hook对象，并且按照他们的初始化顺序构建成一条链表，这条链表会被保存在workInProgress fiber的memoizedState中。  2、单个hooks内部也有memoizedState属性，里面保存了这个hooks的相关状态，不同类型的hooks保存的内容也不同。  
+3、对于useEffect，他会在render阶段的深度遍历中，形成一条effect list(是首尾相连的)。在commit阶段，等dom树构建完成之后，会逐个遍历effect list中的元素并且执行，从而改变DOM。  
+
+在useState中，如果前后两次传入的state相同，是不会触发组件渲染的。  
+这是因为在useState和useReducer的底层，有一个dispatchAction，在这个函数里面，会通过lastRenderedReducer获取最新的state和上一次更新时的state，并且将这两个值进行**浅比较**，如果浅比较之后发现值没有变化，就不会触发更新。这是函数式组件与状态组件的不同之处。  
+注意，这个地方因为是浅比较，所以如果state是一个对象obj，只要是这个引用类型obj的内存地址发生了变化，也是会触发组件重新渲染的，就算这个obj中的各个属性的值没有发生变化。  
+
+
+
+
 ### 项目中遇到的坑集/难点  
 1、在构建弹窗体系时，我将弹窗组件用comp这个属性保存在一个observable的对象中，然后在渲染的时候利用这个对象的comp属性来获取对应的组件，再渲染到页面上。这个时候渲染会报错，大概就是修改observable的值必须用action来包裹，但其实我是都包裹了的。解决方法就是保存弹窗的对象不用observable的值就好了，就直接用一个静态的对象，key-value分别是弹窗名和弹窗内容，要用的时候去取就ok  
 
