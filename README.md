@@ -658,6 +658,12 @@ workInProgress fiber中还有updateQueue，用来保存useEffect链表，这是�
 这是因为在useState和useReducer的底层，有一个dispatchAction，在这个函数里面，会通过lastRenderedReducer获取最新的state和上一次更新时的state，并且将这两个值进行**浅比较**，如果浅比较之后发现值没有变化，就不会触发更新。这是函数式组件与状态组件的不同之处。  
 注意，这个地方因为是浅比较，所以如果state是一个对象obj，只要是这个引用类型obj的内存地址发生了变化，也是会触发组件重新渲染的，就算这个obj中的各个属性的值没有发生变化。  
 
+**shouldComponentUpdate**  
+有几个点需要注意：  
+1、这个方法在组件初始化和forceUpdate的时候不会执行。  
+2、这个钩子函数对props和state的比较是浅比较，也就是说如果state中有一个对象obj，子组件通过父组件的props使用了这个obj，如果只是obj中的某一个属性发生了变化，子组件是不会发生重新渲染的  
+
+
 
 
 
