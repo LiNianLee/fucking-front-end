@@ -664,6 +664,7 @@ workInProgress fiber中还有updateQueue，用来保存useEffect链表，这是�
 2、这个钩子函数对props和state的比较是浅比较，也就是说如果state中有一个对象obj，子组件通过父组件的props使用了这个obj，如果只是obj中的某一个属性发生了变化，子组件是不会发生重新渲染的  
 
 
+### 性能优化
 
 
 
