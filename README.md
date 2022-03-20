@@ -460,7 +460,7 @@ Child.prototype.constructor = Child;
 3、我们绑定在DOM上的某些事件，比如onChange,绑定在document上面时，可能会有多个事件与之对应。  
 4、注意，这种绑定是一种按需绑定，也就是说，我发现需要绑定click事件才会去绑定。  
 
-为什么要采取这种合成事件的模式呢？
+为什么要采取这种合成事件的模式呢？  
 1、避免了多个事件直接绑定在原生DOM上而产生一些无法预料的冲突。  
 2、形成统一的事件体系来抹平浏览器之间的差异性。  
 
@@ -523,7 +523,7 @@ const SimpleEventPlugin = {
 
 
 #### 事件如何绑定的  
-当我们在JSX中给一个元素绑定了一个事件，React在diff阶段，发现是**HostComponent**类型的fiber，就会用diffProperties进行单独处理。在接下来的一系列流程里面，会利用前面事件初始化阶段形成的合成事件-事件插件和合成事件-原生事件之间的映射关系，将这个绑定在fiber元素上的合成事件，拆分成其对应的原生事件，然后判断原生事件的类型，大部分事件按冒泡逻辑处理，少部分如scroll，focus，blur等按照捕获逻辑进行处理(无论是onClick还是onClickCapture都是发生在冒泡阶段)。最后利用统一的事件处理函数dispatchEvent(也就是说，这时候所有原生事件的listener都是dispatchEvent)，逐个绑定在document上(当然前提是这个原生事件之前没有被绑定过)。React并没有将我们业务逻辑里的listener绑定在原生事件上。  
+当我们在JSX中给一个元素绑定了一个事件，React在diff阶段，发现是**HostComponent**类型的fiber，就会用diffProperties进行单独处理。在接下来的一系列流程里面，会利用前面事件初始化阶段形成的合成事件-事件插件和合成事件-原生事件之间的映射关系，将这个绑定在fiber元素上的合成事件，拆分成其对应的原生事件，然后判断原生事件的类型，大部分事件按冒泡逻辑处理，少部分如scroll，focus，blur等按照捕获逻辑进行处理(无论是onClick还是onClickCapture都是发生在冒泡阶段)。这样在这个部分中，就拿到了我绑定在这个元素上的合成事件所对应的所有原生事件依赖。然后遍历这个原生事件依赖，逐个进行下面的处理：先绑定一下统一的事件处理函数dispatchEvent，dispatchEvent.bind(null, topLevelType, eventSystemFlags, targetContainer)，其实这一步绑定是为了把container，原生事件名称，冒泡等属性传到事件处理函数中去。最后再将处理好的统一的事件处理函数dispatchEvent(也就是说，这时候所有原生事件的listener都是dispatchEvent)，绑定在document上(当然前提是这个原生事件之前没有被绑定过)。React并没有将我们业务逻辑里的listener绑定在原生事件上。  
 1、我们将我们需要的事件最终都注册到了document上面。  
 2、所有原生事件的listener都是dispatchEvent，他并没有和我们业务逻辑里的listener扯上什么关系  
 3、同一个类型的事件只会绑定一次，最终反映在DOM事件上的只有dispatchEvent这一个listener,就算后来我们的页面发生了重大变化，React什么都不需要做，不用去removeEventListener之类  
@@ -554,7 +554,7 @@ const SimpleEventPlugin = {
 1、首先产生一个事件源对象，就是上面说的合成事件类型实例(里面封装了比如stopPropagation和preventDefault等方法，这样我们就不用跨浏览器单独处理兼容问题，而是统一交给react底层进行处理了)  
 2、然后从事件源开始逐渐往上，查找DOM元素类型hostComponent对应的fiber，收集上面的react合成事件  
 3、这个时候会维护一个函数执行队列，如果是捕获阶段的处理函数，会使用unshift函数将这个处理函数添加到函数执行队列的前面，如果是冒泡阶段的处理函数，则是通过push添加到函数执行队列的末尾
-4、最后讲函数执行队列挂载到事件源对象上  
+4、最后将函数执行队列挂载到事件源对象上  
 
 这个地方还有一个点要注意的是：React的冒泡和捕获并不是真正的DOM级别的，而是在fiber上面，可以看到上面extractEvents中传入的是fiber节点，但我们的点击是发生在DOM上面啊，这是怎么做到的呢，这里就是点击发生的事件源对象与其对应的fiber节点之间的关系了：  
 首先根据真实的**事件源对象**，找到e.target的真实DOM，然后根据DOM元素，找到其对应的fiber节点，然后进入legacy模式的事件处理系统，进行**批量更新**。  
@@ -585,7 +585,14 @@ handleClick = (e) => {
    }, 0)
 }
 ```  
-在第一个console的时候，当然是能够获取到事件源的，但是当handleClick执行完毕之后，也就是进入到setTimeout中，这个时候事件源对象已经被释放到了事件池中，这样做的好处是我们可以不用再次创建这个事件源对象，而是在需要的时候对其进行复用。(当然如果在setTimeout的回调中传入了e，这个时候因为闭包的存在，里面的console是可以访问到这个事件源的，但是这样也会导致事件源对象不能被及时放回事件池中)
+在第一个console的时候，当然是能够获取到事件源的，但是当handleClick执行完毕之后，也就是进入到setTimeout中，这个时候事件源对象已经被释放到了事件池中，这样做的好处是我们可以不用再次创建这个事件源对象，而是在需要的时候对其进行复用。(当然如果在setTimeout的回调中传入了e，这个时候因为闭包的存在，里面的console是可以访问到这个事件源的，但是这样也会导致事件源对象不能被及时放回事件池中)  
+
+现在把react事件系统串一下：  
+首先是进行初始化，这个时候会有一些合成事件---事件插件，与合成事件---原生事件之间的映射关系
+然后，在JSX中，我们为一个DOM元素绑定了事件，其实并没有真正绑定在这个元素上面，那么到底发生了什么呢？在react的reconcile过程中，如果发现这是一个dom元素类型的fiber，会进行一些操作，这些操作就是注册事件监听。比如在一个button元素上添加了onClick事件，那么就可以根据前面初始化步骤中形成的两个映射关系，拿到onClick合成事件对应的原生事件的依赖。然后统一处理函数dispatchEvent就上场了，首先会对这个函数.bind一下，主要是为了注入container、原生事件、冒泡之类的信息，然后就是将dispatchEvent绑定在document上面，这个时候，document上面就监听了我们的合成事件对应的那些原生事件。但是这里的处理函数是dispatchEvent，不是我们自己写的handle。 
+到了触发阶段，那自然就会触发前面的dispatchEvent。在这个dispatchEvent里面就会进行所谓的批量更新。批量更新在我的理解力就是在一次事件循环之内将所要做的修改全部修改完毕，那他怎么控制是在一次事件循环内呢？有一个变量叫isBatchEventUpdates,为true是表示批量更新正在开启中。更近一步地，dispatchEvent中做了些什么事情呢？最重要的就是plugin.extractEvents，在这个方法中，他会根据传入的原生事件从事件池中复用/产生新的事件源对象，并且维护一个事件处理队列。更近一步地，我们可以根据e.target拿到触发事件的DOM节点，然后可以根据这个DOM节点找到最近的DOM元素对应的fiber节点，然后从下至上遍历fiber节点，查找fiber节点上绑定的真实的处理函数，并且根据他是冒泡还是捕获，使用push/unshift的方式将真实的事件处理函数添加到事件处理队列中。待fiber节点遍历完毕之后，会将事件处理队列保存给事件源对象上，等待执行。  
+最后就是取出这个事件处理队列，逐个执行其中的事件处理函数。需要注意的是，react在dispatchEvent内部自己封了stopPropogation和preventDefault，在遍历执行事件处理函数的时候，会执行event.isPropagationStopped来查询是否阻止冒泡，所以只是单纯在事件处理函数中return false是不能阻止冒泡和默认行为的，事件处理函数还是会执行，只有调用了e.preventDefault或者e.stopPropagation才能真正改变react中内置的阻止冒泡和默认行为的变量。  
+
 
 #### React17中所进行的更改
 1、取消了事件池，这样就不会出现上面setTimeout中获取不到事件源的情况  
