@@ -669,9 +669,18 @@ workInProgress fiber中还有updateQueue，用来保存useEffect链表，这是�
 有几个点需要注意：  
 1、这个方法在组件初始化和forceUpdate的时候不会执行。  
 2、这个钩子函数对props和state的比较是浅比较，也就是说如果state中有一个对象obj，子组件通过父组件的props使用了这个obj，如果只是obj中的某一个属性发生了变化，子组件是不会发生重新渲染的  
-**pureComponent**
-使用
 
+**pureComponent**
+使用需要注意的几个点：  
+1、子组件是pureComponent，父组件在调用子组件的时候，不要使用箭头函数
+```
+class Child extends React.PureComponent {...}
+class Father extends React.PureComponent {
+  render = () => {<Child />}
+}
+```  
+因为父元素使用箭头函数的形式来调用子函数的时候，父元素每次渲染实际上都会生成一个新的子函数，那子元素虽然是PureComponent也失去了它的作用。  
+2、子组件是PureComponent,子组件的父组件是函数组件，父组件在给子组件传递函数类型的props的时候，一定要用useCallback或者useMemo包一下。不然父组件每次渲染，里面的函数其实都是新函数，那传递到子组件下面的也都是新函数，也会导致PureComponent失效。
 
 ### 性能优化
 
@@ -682,6 +691,9 @@ workInProgress fiber中还有updateQueue，用来保存useEffect链表，这是�
 
 2、还是在弹窗体系构建时候发生的问题，我在constructor里面去init了一个observable的对象，但是init的时候并不是直接重写这个对象(也就是让这个对象指向一个新的内存地址)，而是改写了对象中属性的值，这样会导致这个对象的变更最终无法被深度监听到  
 
+
+### 疑惑  
+1、按道理父组件每次渲染，子组件在没有任何优化手段的情况下，也会触发子组件的重新渲染，可是事实上并没有这样，这是为什么？
 
 
 
