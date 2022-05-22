@@ -682,9 +682,21 @@ class Father extends React.PureComponent {
 因为父元素使用箭头函数的形式来调用子函数的时候，父元素每次渲染实际上都会生成一个新的子函数，那子元素虽然是PureComponent也失去了它的作用。  
 2、子组件是PureComponent,子组件的父组件是函数组件，父组件在给子组件传递函数类型的props的时候，一定要用useCallback或者useMemo包一下。不然父组件每次渲染，里面的函数其实都是新函数，那传递到子组件下面的也都是新函数，也会导致PureComponent失效。
 
-### 性能优化
+### React.lazy和Suspense  
+Suspense是一种用同步的方法解决异步操作的方案，Suspense等待异步操作的结果，可以传入一个fallback参数，用来在异步操作结束之前展示，异步操作结束之后才展示正常的子组件。  
+**原理**  
+Suspense搭配React.lazy使用可以实现动态加载功能。使用方式如下：
+```
+const LazyComponent = React.lazy(() => import('./test'));
 
-
+<Suspense fallback={<div>isLoading</div>}>
+  <LazyComponent />
+</Suspense>
+```  
+首先，React.lazy接受传入一个函数，函数中用import引入一个组件，这样整个React.lazy返回的是一个Promise。具体的流程是这样：
+首先，用React.lazy包裹的组件，在React中都会被特殊处理。而他在首次被渲染的时候，会执行init函数，这个init函数里面做的事情就是把Promise的状态设置成pending，并且绑定then函数。（then函数里面是promise执行完成之后的操作，主要是将promise的状态变成resolved）。  
+然后外层的Suspense相当是一个try...catch,他接收到了来自里面的promise，就会执行这个promise。执行完成之后就会触发刚刚绑定好的then函数。这个时候，Suspense会再触发一次渲染，再走到React.lazy里面，这个promise的状态已经被置成了resolved，所以就会把加载好的组件return出来。  
+所以总结起来Suspense的工作流程就是：发起渲染---发现异步请求---渲染悬停----异步操作完毕---二次渲染  
 
 ### 项目中遇到的坑集/难点  
 1、在构建弹窗体系时，我将弹窗组件用comp这个属性保存在一个observable的对象中，然后在渲染的时候利用这个对象的comp属性来获取对应的组件，再渲染到页面上。这个时候渲染会报错，大概就是修改observable的值必须用action来包裹，但其实我是都包裹了的。解决方法就是保存弹窗的对象不用observable的值就好了，就直接用一个静态的对象，key-value分别是弹窗名和弹窗内容，要用的时候去取就ok  
