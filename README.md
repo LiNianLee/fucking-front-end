@@ -698,6 +698,12 @@ const LazyComponent = React.lazy(() => import('./test'));
 然后外层的Suspense相当是一个try...catch,他接收到了来自里面的promise，就会执行这个promise。执行完成之后就会触发刚刚绑定好的then函数。这个时候，Suspense会再触发一次渲染，再走到React.lazy里面，这个promise的状态已经被置成了resolved，所以就会把加载好的组件return出来。  
 所以总结起来Suspense的工作流程就是：发起渲染---发现异步请求---渲染悬停----异步操作完毕---二次渲染  
 
+### commonJS和ESModules  
+1、commonJS可以直接运行在node中，但是如果想在浏览器中运行，需要webpack进行编译，而esModule在node和浏览器中都可以直接使用  
+2、commonJS是动态加载，ESModule是静态加载，动态加载是指可以根据用户需要，根据实际的if条件决定要require哪些文件，而ESModule中对于模块的引用必须在文件的开头进行声明，因此ESModule可以在编译的时候利用tree shaking减少文件体积  
+3、commonJS是在运行时执行，ESModule是在编译时执行  
+3、commonJS返回的是对内容的拷贝，所以如果模块一旦运行完毕，已经生成了固定的结果，后续别的文件对这个模块中的内容进行更改，引用了这个模块的文件中引用的内容也不会发生变更。而ESModule返回的是对内容的引用，在每次使用的时候都会根据这个引用再去拿一下内容  
+
 ### npm run XXX之后发生了什么  
 我们在npm run XXX的时候，实际上执行的是另外的一个指令，比如说npm run server实际上执行的是vue-cli-service serve。但是为什么直接执行vue-cli-service指令会报错，但是通过npm run xxx就不会呢？因为我们的操作系统中是没有vue-cli-service这个指令的，但是通过npm run 命令，实际上执行的是node_modules/.bin下面对应的软链接。那这个软链接是怎么形成的呢？就是我们在npm install的时候，我们用的那个工具的库源代码中package.json里面有bin字段，这个字段可以用来在安装时创建软链接，这样就可以在执行的命令和node_modules/bin之间形成一种映射。
 
