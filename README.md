@@ -746,7 +746,8 @@ rollup()先从入口模块开始，调用new Module()，在这个过程中，会
 
 
 ### 开发中的小tips  
-1、如果需要改变元素的位置，比如left,top，可以使用transform: translate(...),transform是由GPU直接控制渲染的，并不会造成页面重排。  
+1、如果需要改变元素的位置，比如left,top，可以使用transform: translate(...),transform是由GPU直接控制渲染的，并不会造成页面重排。 
+2、如果页面中同时有两个元素使用了同一个id,使用document.getElementById获取的是更外层的那个DOM节点
 
 ### 项目中遇到的坑集/难点  
 1、在构建弹窗体系时，我将弹窗组件用comp这个属性保存在一个observable的对象中，然后在渲染的时候利用这个对象的comp属性来获取对应的组件，再渲染到页面上。这个时候渲染会报错，大概就是修改observable的值必须用action来包裹，但其实我是都包裹了的。解决方法就是保存弹窗的对象不用observable的值就好了，就直接用一个静态的对象，key-value分别是弹窗名和弹窗内容，要用的时候去取就ok  
