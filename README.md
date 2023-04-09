@@ -165,32 +165,29 @@ console.log(a);
 
 ### 手写call
 手写call的过程中有下面几个关键点需要注意：  
-1、用什么方法获取外面传进来的参数，因为arguments并不是一个严格的数组类型，这里首先是用args数组存储了各个arguments参数，然后向eval传递一个拼接的字符串，eval会执行这个字符串。  
+1、用什么方法获取外面传进来的参数，因为arguments并不是一个严格的数组类型，所以先要将其转成一个数组，再用slice截取外面传进来的参数部分。  
 2、第二点需要注意的是，如果给call的第一个参数传null的话，this会默认指向window，但是在node中没有window，所以需要多加一重判断，如果没有window的话，就传递一个空对象    
 3、call函数执行是可能存在返回值的，所以需要把func的执行结果return出去
 ```
-Function.prototype.myCall = function (context) {
-  var context = context || (typeof window === 'undefined' ? {} : window);
-  context.func = this; // 目标函数
-  var args = [];
-  for (let i = 1; i < arguments.length; i++) {
-    args.push('arguments[' + i + ']'); // 最终拼接的效果是：args = [arguments[1], arguments[2], arguments[3]]
-  }
-  var obj = eval('context.func(' + args + ')');
-  delete context.func;
-  return obj;
-}
-
 var obj = {
   value: 1
 }
 
-function print (p1, p2, p3) {
+function foo (a, b) {
   console.log(this.value);
-  console.log(p1 + p2 + p3);
+  console.log(a + b);
 }
 
-print.myCall(null, 'a', 'b', 'c');
+Function.prototype.myCall = function (context) {
+  var context = context || (typeof window === 'undefined' ? {} : window);
+  context.fn = this;
+  let args = [...arguments].slice(1);
+  let obj = context.fn(...args);
+  delete context.fn;
+  return obj;
+}
+
+foo.myCall(null, 1, 2);
 ```
 
 ### 手写apply
