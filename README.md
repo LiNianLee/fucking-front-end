@@ -437,7 +437,8 @@ function throttleV4 (callback, wait, options) {
 ### defer和async 
 defer和async是用来加在script脚本上的标签，在不加这些标签的时候，script脚本的下载，解析和执行是会阻塞整个document的解析的(因为js是单线程的)，也就是说在解析文档的过程中如果遇到了script脚本，会暂停document的解析，转而去下载执行脚本。而在加了这两个标签之后会产生一些变化。
 如果增加的是defer标签，他不会阻塞document的解析，这个属性会在解析document的同时进行下载，并且在DOMContentLoaded事件(原始的HTML文档被全部加载和解析完成)之前顺序执行这些defer脚本，顺序执行脚本就是说如果有多个脚本加了defer，他们的执行顺序是按照他们在文档中的顺序。 
-async同样不会阻塞document的解析，他也会在document解析的同时去下载，只是文件在下载完成之后就会立即执行，没有固定的先后顺序，多个加了async标签的脚本，谁先下载完了谁就会先执行。注意，脚本下载的时候是不会打断document的解析的，但是脚本在执行的时候是会打断document的解析的。  
+async同样不会阻塞document的解析，他也会在document解析的同时去下载，只是文件在下载完成之后就会立即执行，没有固定的先后顺序，多个加了async标签的脚本，谁先下载完了谁就会先执行。注意，脚本下载的时候是不会打断document的解析的，但是脚本在执行的时候是会打断document的解析的。为什么下载的时候不会阻塞document的解析，是因为下载时启用的是http请求线程，该线程不会阻塞js线程，但是执行的时候都是使用的js线程，因此他会和document文档解析过程中使用的js线程和GUI渲染线程有冲突。  
+![截屏2023-04-10 下午9 26 15](https://user-images.githubusercontent.com/37279552/230909965-885fb672-df7f-4a3c-8603-6c17e9f174e5.png)
 
 ### React组件通信  
 [参考文章](https://zhuanlan.zhihu.com/p/326254966)
