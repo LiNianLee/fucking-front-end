@@ -435,9 +435,9 @@ function throttleV4 (callback, wait, options) {
 }
 ```
 ### defer和async 
-defer和async是用来加在script脚本上的标签，在不加这些标签的时候，script脚本的下载，解析和执行是会阻塞整个document的解析的，也就是说在解析文档的过程中如果遇到了script脚本，会暂停document的解析，转而去下载执行脚本。而在加了这两个标签之后会产生一些变化。
+defer和async是用来加在script脚本上的标签，在不加这些标签的时候，script脚本的下载，解析和执行是会阻塞整个document的解析的(因为js是单线程的)，也就是说在解析文档的过程中如果遇到了script脚本，会暂停document的解析，转而去下载执行脚本。而在加了这两个标签之后会产生一些变化。
 如果增加的是defer标签，他不会阻塞document的解析，这个属性会在解析document的同时进行下载，并且在DOMContentLoaded事件(原始的HTML文档被全部加载和解析完成)之前顺序执行这些defer脚本，顺序执行脚本就是说如果有多个脚本加了defer，他们的执行顺序是按照他们在文档中的顺序。 
-async同样不会阻塞document的解析，他也会在document解析的同时去下载，只是文件在下载完成之后就会立即执行，没有固定的先后顺序，多个家乐async标签的脚本，谁先下载完了谁就会先执行。注意，脚本下载的时候是不会打断document的解析的，但是脚本在执行的时候是会打断document的解析的。
+async同样不会阻塞document的解析，他也会在document解析的同时去下载，只是文件在下载完成之后就会立即执行，没有固定的先后顺序，多个加了async标签的脚本，谁先下载完了谁就会先执行。注意，脚本下载的时候是不会打断document的解析的，但是脚本在执行的时候是会打断document的解析的。  
 
 ### React组件通信  
 [参考文章](https://zhuanlan.zhihu.com/p/326254966)
@@ -654,7 +654,7 @@ handleClick = (e) => {
 现在把react事件系统串一下：  
 首先是进行初始化，这个时候会有一些合成事件---事件插件，与合成事件---原生事件之间的映射关系
 然后，在JSX中，我们为一个DOM元素绑定了事件，其实并没有真正绑定在这个元素上面，那么到底发生了什么呢？在react的reconcile过程中，如果发现这是一个dom元素类型的fiber，会进行一些操作，这些操作就是注册事件监听。比如在一个button元素上添加了onClick事件，那么就可以根据前面初始化步骤中形成的两个映射关系，拿到onClick合成事件对应的原生事件的依赖。然后统一处理函数dispatchEvent就上场了，首先会对这个函数.bind一下，主要是为了注入container、原生事件、冒泡之类的信息，然后就是将dispatchEvent绑定在document上面，这个时候，document上面就监听了我们的合成事件对应的那些原生事件。但是这里的处理函数是dispatchEvent，不是我们自己写的handle。 
-到了触发阶段，那自然就会触发前面的dispatchEvent。在这个dispatchEvent里面就会进行所谓的批量更新。批量更新在我的理解力就是在一次事件循环之内将所要做的修改全部修改完毕，那他怎么控制是在一次事件循环内呢？有一个变量叫isBatchEventUpdates,为true是表示批量更新正在开启中。更近一步地，dispatchEvent中做了些什么事情呢？最重要的就是plugin.extractEvents，在这个方法中，他会根据传入的原生事件从事件池中复用/产生新的事件源对象，并且维护一个事件处理队列。更近一步地，我们可以根据e.target拿到触发事件的DOM节点，然后可以根据这个DOM节点找到最近的DOM元素对应的fiber节点，然后从下至上遍历fiber节点，查找fiber节点上绑定的真实的处理函数，并且根据他是冒泡还是捕获，使用push/unshift的方式将真实的事件处理函数添加到事件处理队列中。待fiber节点遍历完毕之后，会将事件处理队列保存给事件源对象上，等待执行。  
+到了触发阶段，那自然就会触发前面的dispatchEvent。在这个dispatchEvent里面就会进行所谓的批量更新。批量更新在我的理解力就是在一次之内将所要做的修改全部修改完毕，那他怎么控制是在一次事件循环内呢？有一个变量叫isBatchEventUpdates,为true是表示批量更新正在开启中。更近一步地，dispatchEvent中做了些什么事情呢？最重要的就是plugin.extractEvents，在这个方法中，他会根据传入的原生事件从事件池中复用/产生新的事件源对象，并且维护一个事件处理队列。更近一步地，我们可以根据e.target拿到触发事件的DOM节点，然后可以根据这个DOM节点找到最近的DOM元素对应的fiber节点，然后从下至上遍历fiber节点，查找fiber节点上绑定的真实的处理函数，并且根据他是冒泡还是捕获，使用push/unshift的方式将真实的事件处理函数添加到事件处理队列中。待fiber节点遍历完毕之后，会将事件处理队列保存给事件源对象上，等待执行。  
 最后就是取出这个事件处理队列，逐个执行其中的事件处理函数。需要注意的是，react在dispatchEvent内部自己封了stopPropogation和preventDefault，在遍历执行事件处理函数的时候，会执行event.isPropagationStopped来查询是否阻止冒泡，所以只是单纯在事件处理函数中return false是不能阻止冒泡和默认行为的，事件处理函数还是会执行，只有调用了e.preventDefault或者e.stopPropagation才能真正改变react中内置的阻止冒泡和默认行为的变量。  
 
 
