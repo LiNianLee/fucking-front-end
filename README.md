@@ -769,6 +769,87 @@ const LazyComponent = React.lazy(() => import('./test'));
 然后外层的Suspense相当是一个try...catch,他接收到了来自里面的promise，就会执行这个promise。执行完成之后就会触发刚刚绑定好的then函数。这个时候，Suspense会再触发一次渲染，再走到React.lazy里面，这个promise的状态已经被置成了resolved，所以就会把加载好的组件return出来。  
 所以总结起来Suspense的工作流程就是：发起渲染---发现异步请求---渲染悬停----异步操作完毕---二次渲染  
 
+### 手写Promise
+```
+class myPromise {
+  constructor (executor) {
+    this.status = 'pending';
+    this.fulfilledQueue = [];
+    this.rejectedSQueue = [];
+    this.value = undefined;
+    let _resolve = (val) => {
+      let resolve = () => {
+        if (this.status !== 'pending') return;
+        this.status = 'fulfilled';
+        this.value = val;
+        this.fulfilledQueue.forEach(fulfilled => {
+          fulfilled?.(val);
+        });
+      }
+      setTimeout(() => {
+        resolve();
+      }, 0);
+    }
+    
+    let _reject = (val) => {
+      let reject = () => {
+        if (this.status !== 'pending') return;
+        this.status = 'rejected';
+        this.value = val;
+        this.rejectedSQueue.forEach(rejected => {
+          rejected?.(val);
+        });
+      }
+      setTimeout(() => {
+        reject();
+      }, 0);
+    }
+    executor(_resolve, _reject);
+  }
+
+  // 假设每次链式调用then的时候返回的都是同一个Promise
+  then (success, fail) {
+    // success是前一个Promise执行成功的回调
+    // fail是前一个Promise执行失败的回调
+    // 现在then需要return出去一个新的Promise供后面的then调用
+
+    typeof success !== 'function' ? success = value => value : null;
+    typeof fail != 'function' ? fail = error => error : null;
+    const _this = this;
+    return new myPromise((resolve, reject) => {
+      const successCall = (value) => {
+        try {
+          const x = success?.(value);
+          // 如果前面的执行成功的回调本身是一个promise，那就需要等那个promise结束
+          x instanceof myPromise ? x.then(resolve, reject) : resolve(x);
+        } catch (err) {
+          reject(err);
+        }
+      }
+      const failCall = (error) => {
+        try {
+          const x = fail?.(error);
+          x instanceof myPromise ? x.then(resolve, reject) : resolve(x);
+        } catch (err) {
+          reject(err);
+        }
+      }
+
+      switch (this.status) {
+        case 'pending': 
+          this.fulfilledQueue.push(successCall);
+          this.rejectedSQueue.push(failCall);
+          break;
+        case 'resolved':
+          success?.(this.value);
+        case 'rejected':
+          fail?.(this.value);
+      }
+    })
+  }
+}
+```
+
 ### commonJS和ESModules  
 1、commonJS可以直接运行在node中，但是如果想在浏览器中运行，需要webpack进行编译，而esModule在node和浏览器中都可以直接使用  
 2、commonJS是动态加载，ESModule是静态加载，动态加载是指可以根据用户需要，根据实际的if条件决定要require哪些文件，而ESModule中对于模块的引用必须在文件的开头进行声明，因此ESModule可以在编译的时候利用tree shaking减少文件体积  
