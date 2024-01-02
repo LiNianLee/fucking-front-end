@@ -774,61 +774,106 @@ const LazyComponent = React.lazy(() => import('./test'));
 class myPromise {
   constructor (executor) {
     this.status = 'pending';
-    this.fulfilledQueue = [];
-    this.rejectedSQueue = [];
     this.value = undefined;
+    this.fulfilledQueue = [];
+    this.rejectQueue = [];
+
     let _resolve = (val) => {
-      let resolve = () => {
+      const resolve = () => {
         if (this.status !== 'pending') return;
         this.status = 'fulfilled';
         this.value = val;
-        this.fulfilledQueue.forEach(fulfilled => {
-          fulfilled?.(val);
-        });
+        while (this.fulfilledQueue.length) {
+          const fulfillCall = this.fulfilledQueue.shift();
+          fulfillCall?.(val);
+        }
       }
       setTimeout(() => {
         resolve();
-      }, 0);
+      }, 0)
     }
-    
+
     let _reject = (val) => {
-      let reject = () => {
+      const reject = () => {
         if (this.status !== 'pending') return;
-        this.status = 'rejected';
+        this.status === 'rejected';
         this.value = val;
-        this.rejectedSQueue.forEach(rejected => {
-          rejected?.(val);
-        });
+        while (this.rejectQueue.length) {
+          const rejectCall = this.rejectQueue.shift();
+          rejectCall?.(val);
+        }
       }
       setTimeout(() => {
         reject();
       }, 0);
     }
+
     executor(_resolve, _reject);
   }
 
-  // 假设每次链式调用then的时候返回的都是同一个Promise
-  then (success, fail) {
-    // success是前一个Promise执行成功的回调
-    // fail是前一个Promise执行失败的回调
-    // 现在then需要return出去一个新的Promise供后面的then调用
+  static resolve (val) {
+    return val instanceof myPromise ?  val : new myPromise((resolve) => {
+      resolve(val);
+    })
+  }
 
-    typeof success !== 'function' ? success = value => value : null;
-    typeof fail != 'function' ? fail = error => error : null;
-    const _this = this;
+  static reject (err) {
     return new myPromise((resolve, reject) => {
-      const successCall = (value) => {
+      reject(err);
+    })
+  }
+
+  static all (promiseArr) {
+    let result = [];
+    let index = 0;
+
+    return new myPromise((resolve, reject) => {
+      promiseArr.forEach((p, i) => {
+        // myPromise.resolve用来处理p不是promise的情况
+        myPromise.resolve(p).then(val => {
+          result[i] = val;
+          index++;
+
+          if (index === promiseArr.length) {
+            resolve(result);
+          }
+        }, error => {
+          reject(error);
+        })
+      });
+    })
+  }
+
+  static race (promiseArr) {
+    return new myPromise((resolve, reject) => {
+      for (let p of promiseArr) {
+        myPromise.resolve(p).then(() => {
+          resolve(p)
+        }, err => {
+          reject(err);
+        })
+      }
+    })
+  }
+
+  then (successCall, rejectCall) {
+    // 预先处理一下successCall和rejectCall
+    typeof successCall !== 'function' ? successCall = value => value : null;
+    typeof rejectCall !== 'function' ? rejectCall = error => error : null;
+    return new myPromise ((resolve, reject) => {
+      // 为了实现链式调用的功能，也就是说then里面return出去的promise必须是一个有处理结果的promise，如果fulfillQueue直接push successCall的话会得到一个未经处理的新promise
+      const __resolve = (val) => {
         try {
-          const x = success?.(value);
-          // 如果前面的执行成功的回调本身是一个promise，那就需要等那个promise结束
+          const x = successCall?.(val);
           x instanceof myPromise ? x.then(resolve, reject) : resolve(x);
         } catch (err) {
           reject(err);
         }
       }
-      const failCall = (error) => {
+
+      const __reject = (error) => {
         try {
-          const x = fail?.(error);
+          const x = rejectCall?.(error);
           x instanceof myPromise ? x.then(resolve, reject) : resolve(x);
         } catch (err) {
           reject(err);
@@ -836,16 +881,29 @@ class myPromise {
       }
 
       switch (this.status) {
-        case 'pending': 
-          this.fulfilledQueue.push(successCall);
-          this.rejectedSQueue.push(failCall);
+        case 'pending':
+          this.fulfilledQueue.push(__resolve);
+          this.rejectQueue.push(__reject);
           break;
-        case 'resolved':
-          success?.(this.value);
+        case 'fulfilled':
+          successCall?.(this.value);
+          break;
         case 'rejected':
-          fail?.(this.value);
+          rejectCall?.(this.value);
+          break;
       }
     })
+  }
+
+  catch (rejectFn) {
+    return this.then(undefined, rejectFn);
+  }
+
+  finally (callback) {
+    return this.then(
+      value => myPromise.resolve(callback?.()).then(() => value),
+      error => myPromise.resolve(callback?.()).then(() => { throw error; })
+    ) 
   }
 }
 ```
