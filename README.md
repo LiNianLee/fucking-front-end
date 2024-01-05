@@ -935,6 +935,13 @@ rollup()先从入口模块开始，调用new Module()，在这个过程中，会
 在这种场景下，从组件B的角度上来看，他接受了一个不变的函数，按道理来说应该不会每次都次重新渲染。但由于我们没有组件的渲染进行任何优化，所以每次父组件重新渲染，传到组件B的props每次都是一个新的props，因此每次都会造成组件B也重新渲染。解决方法就是：如果使用mobx管理数据的话，用observer包裹组件B(内部已经使用了React.memo)，或者直接用Reat.memo包裹组件B。  
 但我们经常会有一种操作是将这个setState放在handleClick中，然后进行了一些其他操作，最后将这个handleClick传给子组件B，那么父组件的重新渲染是会导致B重新渲染的，就算B包裹了memo或者observer都没有用，因为父组件每次重新渲染都的确会产生一个新的handleClick，对B来说这是一个新的props。所以推测出memo和observer应该是一种深比较，对于同样物理地址的方法会把它们看成相等，而不同地址的方法，就算他们写法完全一样也是不同的props。
 
+### 基本数据类型之Symbol
+关于symbol需要关注的几个点是：  
+1、没有两个Symbol是相等的  
+2、基于第一点，Symbol可以有效避免命名冲突  
+3、由于Symbol不会出现在Object.keys()的结果中，所以Symbol也可以被用来作私有属性的命名，除非明确地使用Object.getOwnPropertySymbols()才能获取obj对象中的Symbol属性对应的值  
+4、以及JSON.stringify会忽略对象中的Symbol属性名和属性值
+
 ### 疑惑  
 为什么webpack需要打包才能用？他打包是为了什么？而vite直接通过劫持HTTP分析文件之间的关系，把文件整合之后返回给用户，webpack为什么不能也这样？所以打包的目的是什么？
 
